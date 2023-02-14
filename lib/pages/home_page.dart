@@ -30,10 +30,14 @@ class _HomePageState extends State<HomePage> {
             largeTitle: Text('アラーム', style: TextStyle(color: Colors.white)),
             trailing: GestureDetector(
                 child: Icon(Icons.add, color: Colors.orange),
-               onTap: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => AddEditAlarmPage()));
-               }
-                ),
+                onTap: () async {
+                  await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => AddEditAlarmPage(alarmList)));
+                  setState(() {});
+                  alarmList.sort((a, b) => a.alarmTime.compareTo(b.alarmTime));
+                }),
           ),
           SliverList(
             delegate: SliverChildBuilderDelegate((context, index) {
@@ -49,7 +53,8 @@ class _HomePageState extends State<HomePage> {
                       children: [
                         SlidableAction(
                             onPressed: (BuildContext context) {
-                              print("🐕");
+                              alarmList.removeAt(index);
+                              setState(() {});
                             },
                             backgroundColor: Color(0xFFFE4A49),
                             foregroundColor: Colors.white,
@@ -91,17 +96,26 @@ class _HomePageState extends State<HomePage> {
                       ],
                     ),
                     child: ListTile(
-                      title: Text(DateFormat('H:mm').format(alarm.alarmTime),
-                          style: TextStyle(color: Colors.white, fontSize: 50)),
-                      trailing: CupertinoSwitch(
-                        value: alarm.isActive,
-                        onChanged: (newValue) {
-                          setState(() {
-                            alarm.isActive = newValue;
-                          });
-                        },
-                      ),
-                    ),
+                        title: Text(DateFormat('H:mm').format(alarm.alarmTime),
+                            style:
+                                TextStyle(color: Colors.white, fontSize: 50)),
+                        trailing: CupertinoSwitch(
+                          value: alarm.isActive,
+                          onChanged: (newValue) {
+                            setState(() {
+                              alarm.isActive = newValue;
+                            });
+                          },
+                        ),
+                        onTap: ()async  {
+                          await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => AddEditAlarmPage(
+                                      alarmList,
+                                      index: index)));
+                          setState(() {});
+                        }),
                   ),
                   Divider(color: Colors.grey, height: 0)
                 ],

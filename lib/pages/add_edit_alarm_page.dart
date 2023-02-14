@@ -1,9 +1,12 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:sample_alarm/alarm.dart';
 
 class AddEditAlarmPage extends StatefulWidget {
-  const AddEditAlarmPage({Key? key}) : super(key: key);
+  final List<Alarm> alarmList;
+  final int? index;
+  const AddEditAlarmPage(this.alarmList, {this.index, Key? key}) : super(key: key);
 
   @override
   State<AddEditAlarmPage> createState() => _AddEditAlarmPageState();
@@ -12,6 +15,20 @@ class AddEditAlarmPage extends StatefulWidget {
 class _AddEditAlarmPageState extends State<AddEditAlarmPage> {
   TextEditingController timeTextController = TextEditingController();
   DateTime selectedDate = DateTime.now();
+
+  void initEditAlarm() {
+    if(widget.index != null){
+      selectedDate = widget.alarmList[widget.index!].alarmTime;
+      timeTextController.text = DateFormat('H:mm').format(selectedDate);
+      setState(() {});
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    initEditAlarm();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,6 +53,12 @@ class _AddEditAlarmPageState extends State<AddEditAlarmPage> {
                     child: Text("保存", style: TextStyle(color: Colors.orange)),
                   ),
                   onTap: () {
+                    Alarm alarm = Alarm(alarmTime: DateTime(2000, 1, 1, selectedDate.hour, selectedDate.minute));
+                    if(widget.index != null){
+                      widget.alarmList[widget.index!] = alarm;
+                    } else{
+                      widget.alarmList.add(alarm);
+                    }
                     Navigator.pop(context);
                   })
             ]),
