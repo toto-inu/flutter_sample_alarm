@@ -1,9 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:intl/intl.dart';
 import 'package:sample_alarm/alarm.dart';
 import 'package:sample_alarm/pages/add_edit_alarm_page.dart';
+import 'package:sample_alarm/sqflite.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -13,11 +16,29 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  List<Alarm> alarmList = [
-    Alarm(alarmTime: DateTime.now()),
-    Alarm(alarmTime: DateTime.now()),
-    Alarm(alarmTime: DateTime.now()),
-  ];
+  List<Alarm> alarmList = [];
+
+  Future<void> initDb() async {
+    await DbProvider.setDb();
+    alarmList = await DbProvider.getData();
+    setState(() {});
+  }
+
+  Future<void> reBuild() async {
+    print("now rebuilding...");
+    alarmList = await DbProvider.getData();
+    alarmList.sort((a, b) => a.alarmTime.compareTo(b.alarmTime));
+    setState(() {});
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    Future(()async {
+      await initDb();
+      await reBuild();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,8 +56,7 @@ class _HomePageState extends State<HomePage> {
                       context,
                       MaterialPageRoute(
                           builder: (context) => AddEditAlarmPage(alarmList)));
-                  setState(() {});
-                  alarmList.sort((a, b) => a.alarmTime.compareTo(b.alarmTime));
+                  reBuild();
                 }),
           ),
           SliverList(
@@ -52,9 +72,9 @@ class _HomePageState extends State<HomePage> {
                       motion: const ScrollMotion(),
                       children: [
                         SlidableAction(
-                            onPressed: (BuildContext context) {
-                              alarmList.removeAt(index);
-                              setState(() {});
+                            onPressed: (BuildContext context) async {
+                              await DbProvider.deleteData(alarmList[index].id);
+                              reBuild();
                             },
                             backgroundColor: Color(0xFFFE4A49),
                             foregroundColor: Colors.white,
@@ -101,20 +121,20 @@ class _HomePageState extends State<HomePage> {
                                 TextStyle(color: Colors.white, fontSize: 50)),
                         trailing: CupertinoSwitch(
                           value: alarm.isActive,
-                          onChanged: (newValue) {
-                            setState(() {
-                              alarm.isActive = newValue;
-                            });
+                          onChanged: (newValue) async {
+                            alarm.isActive = newValue;
+                            await DbProvider.updateData(alarm);
+                            reBuild();
                           },
                         ),
-                        onTap: ()async  {
+                        onTap: () async {
                           await Navigator.push(
                               context,
                               MaterialPageRoute(
                                   builder: (context) => AddEditAlarmPage(
                                       alarmList,
                                       index: index)));
-                          setState(() {});
+                          reBuild();
                         }),
                   ),
                   Divider(color: Colors.grey, height: 0)
