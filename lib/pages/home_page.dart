@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import 'package:sample_alarm/alarm.dart';
 import 'package:sample_alarm/pages/add_edit_alarm_page.dart';
 import 'package:sample_alarm/sqflite.dart';
+import 'package:timezone/timezone.dart' as tz;
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -19,7 +20,6 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   List<Alarm> alarmList = [];
-  Timer? _timer;
   DateTime time = DateTime.now();
   final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
   int id = 0;
@@ -37,16 +37,35 @@ class _HomePageState extends State<HomePage> {
     setState(() {});
   }
 
-  // void notification() {
-  //  flutterLocalNotificationsPlugin.show(
-  //       1,
-  //       'アラーム',
-  //       '時間になりました',
-  //       NotificationDetails(
-  //           android: AndroidNotificationDetails('id', 'name',
-  //               importance: Importance.max, priority: Priority.high),
-  //           iOS: DarwinNotificationDetails()));
-  // }
+  void initializeNotifications() {
+    flutterLocalNotificationsPlugin.initialize(InitializationSettings(
+      // android: AndroidInitializationSettings('ic_launcher'),
+      // [Tips] 適切なアプリのアイコンアセットを設定する必要がある。
+      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+      // iOS: DarwinInitializationSettings()
+    ));
+  }
+
+  void setNotification(DateTime alarmTime) {
+    print("🐢setNotification${DateFormat("dd HH:mm").format(alarmTime)}");
+    print("🐈🐈🐈${tz.TZDateTime.from(alarmTime, tz.local)}");
+    const AndroidNotificationDetails androidNotificationDetails =
+        AndroidNotificationDetails('your channel id', 'your channel name',
+            channelDescription: 'your channel description',
+            importance: Importance.max,
+            priority: Priority.high,
+            ticker: 'ticker');
+    const NotificationDetails notificationDetails =
+        NotificationDetails(android: androidNotificationDetails);
+
+    flutterLocalNotificationsPlugin.zonedSchedule(id++, 'アラーム', '時間になりました。',
+        tz.TZDateTime.from(alarmTime, tz.local), notificationDetails,
+        // [tips] サマータイムなど考慮するか？
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        // [tips] 省電力モード？
+        androidAllowWhileIdle: true);
+  }
 
   Future<void> _showNotification() async {
     const AndroidNotificationDetails androidNotificationDetails =
@@ -64,31 +83,13 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void initState() {
+    print(
+        "🦊${DateFormat('HH:mm:ss ---').format(tz.TZDateTime.now(tz.local))} ${tz.local}");
     super.initState();
     Future(() async {
       await initDb();
+      initializeNotifications();
       await reBuild();
-    });
-    flutterLocalNotificationsPlugin.initialize(InitializationSettings(
-      // android: AndroidInitializationSettings('ic_launcher'),
-      // [Tips] 適切なアプリのアイコンアセットを設定する必要がある。
-      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
-      // iOS: DarwinInitializationSettings()
-    ));
-
-    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
-      print("定期実行🐕 ${DateFormat('HH:mm:ss').format(time)}");
-      // time.add(Duration(seconds: 1));
-      time = DateTime.now();
-      alarmList.forEach((alarm) {
-        if (alarm.isActive == true &&
-            alarm.alarmTime.hour == time.hour &&
-            alarm.alarmTime.minute == time.minute &&
-            time.second == 0) {
-          print("!!!!!!🐕");
-          _showNotification();
-        };
-      });
     });
   }
 
@@ -180,14 +181,17 @@ class _HomePageState extends State<HomePage> {
                           },
                         ),
                         onTap: () async {
-                          await Navigator.push(
+                          Alarm result = await Navigator.push(
                               context,
                               MaterialPageRoute(
                                   builder: (context) => AddEditAlarmPage(
                                       alarmList,
                                       index: index)));
-                          reBuild();
-                        }),
+                          if(result != null){
+                            setNotification(result.alarmTime);
+                            reBuild();
+                          }
+                          }),
                   ),
                   Divider(color: Colors.grey, height: 0)
                 ],
